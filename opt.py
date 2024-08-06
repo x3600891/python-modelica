@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from OMPython import ModelicaSystem
+import pandas as pd
+from dymola.dymola_interface import DymolaInterface
 class GeneticAlgorithm:
     def __init__(self, objective_function, bounds, population_size=5, generations=10, crossover_rate=0.8, mutation_rate=0.2):
         self.objective_function = objective_function
@@ -76,23 +77,46 @@ class GeneticAlgorithm:
         plt.ylabel('Best Fitness')
         plt.title('Evolution of Best Fitness')
         plt.show()
+
+
+#自己编写目标函数
+def create_objective_function(dymola):
+    def objective_function(x,y): 
+        file="res" 
+        x=str(x)
+        y=str(y)      
+        dymola.simulateModel("simulationAndOpt.system",resultFile=file)
+        dymola.ExecuteCommand(f"x={x};y={y};")
+        dymola.simulateModel("simulationAndOpt.system",resultFile=file)
+        signals = dymola.readTrajectoryNames(fileName=f"{file}.mat")
+        size=dymola.readTrajectorySize(f"{file}.mat")
+        result = pd.DataFrame(np.array(dymola.readTrajectory(fileName=f"{file}.mat",signals=signals,rows=size)).transpose(),columns=signals)
+        return result.loc[0,'energy']
+    return objective_function
+    
+
 # 示例：定义目标函数
-def objective_function(x, y):
-    model_path="E:/111jieping/fangzhenjiyouhua/"
-    mod=ModelicaSystem(model_path + "simulationAndOpt.mo","simulationAndOpt.system")
+# def objective_function_raw(x, y):
+#     model_path="E:/111jieping/fangzhenjiyouhua/"
+#     mod=ModelicaSystem(model_path + "simulationAndOpt.mo","simulationAndOpt.system")
 
-    mod.setParameters(["x="+str(x),"y="+str(y)])
+#     mod.setParameters(["x="+str(x),"y="+str(y)])
 
-    mod.buildModel()
+#     mod.buildModel()
 
-    mod.setSimulationOptions(["stopTime=0.2","tolerance=1e-08"])
-    mod.simulate(resultfile="result.mat")
-    result=mod.getSolutions(["time","energy"])
+#     mod.setSimulationOptions(["stopTime=0.2","tolerance=1e-08"])
+#     mod.simulate(resultfile="result.mat")
+#     result=mod.getSolutions(["time","energy"])
 
     return result[1][0]
 
 # 示例：定义参数范围约束
 bounds = [(-10, 10), (-10, 10)]  # 参数 x 的范围约束为 -5 到 5，参数 y 的范围约束为 -3 到 3
+
+path=r"D:/Program Files/Dymola 2023/bin64/Dymola.exe"
+dymola = DymolaInterface(path,showwindow=True,port=1)
+dymola.openModel(path="F:/00 Study/03 Github/python-modelica/simulationAndOpt.mo")
+objective_function=create_objective_function(dymola)
 
 # 创建遗传算法实例
 ga = GeneticAlgorithm(objective_function, bounds)

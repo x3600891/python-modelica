@@ -1,0 +1,9 @@
+ 
+Compiling and linking the model (Visual C++). 
+ 
+Guessed compiler version: 1929  
+dsmodel.c
+  正在创建库 dymosim.lib 和对象 dymosim.exp
+ 
+Successful generation of Dymosim. 
+ 
